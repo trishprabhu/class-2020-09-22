@@ -14,6 +14,7 @@ Load **tidyverse**, **readxl* and **janitor** into your setup chunk.
 library(tidyverse)
 library(readxl)
 library(janitor)
+library(ggthemes)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -40,7 +41,12 @@ sep_old <-
          title = course_title,
          name = course_name,
          department = course_department) %>% 
-  filter(u_grad > 10)
+  filter(u_grad > 10) %>%
+  group_by(id, title, name, department) %>%
+  summarize(total_u_grad = sum(u_grad), .groups = "drop") %>%
+  arrange(desc(total_u_grad))
+
+View(sep_old)
 
 # But this is not correct! Look for Gov 50: Data. What do you see? What can you
 # do to clean it up?
@@ -51,29 +57,66 @@ sep_old <-
 
 **Prompt:** Read in and clean the new data, creating an object called `sep_new`. 
 
+```{r sc1}
 
+sep_new <- 
+  read_excel("new_data/class_enrollment_summary_by_term_9-22-2020.xlsx", 
+             skip = 3) %>% 
+  clean_names() %>% 
+  filter(! is.na(course_title)) %>% 
+  select(-grad, -non_degree, -x_reg, -vus, -employee, 
+         -withdraw, -total, -instructor_full_name, -course_section_code) %>%
+  rename(id = course_id,
+         title = course_title,
+         name = course_name,
+         department = course_department) %>% 
+  filter(u_grad > 10) %>%
+  group_by(id, title, name, department) %>%
+  summarize(total_u_grad = sum(u_grad), .groups = "drop") %>%
+  arrange(desc(total_u_grad))
+
+View(sep_new)
+```
 
 ### Scene 2
 
 **Prompt:** Dean Amanda Claybaugh is concerned about the drop in undergraduate enrollment in some courses between September 1 and today. She wants you to analyze this issue. Before you dive into the details, provide some bullet points as to how Wisdom and Temperance apply to this situation. Every student should have several bullet points. Someone may be asked to share their screen and discuss. Refer to the Chapter 3 discussions about these Cardinal Virtues. Open it up in your browser.
 
 
-Before we start on the model, Wisdom suggests we should:
+Before we start on the model, Wisdom suggests we should decide what data is actually relevant to the problem we want to solve. We have to be wise in how we go from the problem which confronts us to the data which we have access to or might reasonably acquire.
 
 
-
-
-After we have a model, Temperance suggests we should:
-
-
+After we have a model, Temperance suggests we should recognize the limitations of our model. We cannot, for example, infer causation in Scene 5.
 
 ### Scene 3
 
 **Prompt:** Which classes had the biggest increases and decreases in undergraduate enrollments between September 1 and today? Make a graphic that shows the 5 biggest increases and decreases. Make it look nice.
 
+```{r sc3}
 
+sep_new <- sep_new %>%
+  rename(enrollment_new = total_u_grad)
 
+sep_old <- sep_old %>%
+  rename(enrollment_old = total_u_grad)
 
+sep <- inner_join(sep_old, sep_new, by = c("id", "title", "name", "department")) %>%
+  mutate(enrollment_difference = enrollment_new - enrollment_old) %>%
+  arrange(enrollment_difference) %>%
+  filter(enrollment_difference <= -13 | enrollment_difference >= 13) %>%
+  ggplot(aes(x = title, y = enrollment_difference, fill = department)) +
+  geom_col() +
+  theme_clean() +
+  theme(axis.text.x = element_text(angle = 45)) +
+  labs(title = "Enrollment Changes -- Fall 2020", x = "Course", y = "Enrollment"
+       , caption = "Source: Harvard Registrar's Office")
+  
+
+sep
+
+View(sep)
+
+```
 
 ## Scene 4
 
@@ -84,4 +127,13 @@ After we have a model, Temperance suggests we should:
 
 Read in the data for all the available dates and use it to make a graphic which shows the changes in enrollment over time. The **gghighlight** package might be useful, perhaps to highlight what has happened in Gov 50, as compared to the other 500 or so courses.
 
+```{r sc3}
 
+library(reprex)
+re <- reprex({trisha <- esjaksjasj/2
+}, venue = "R")
+re
+
+
+
+```
